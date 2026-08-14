@@ -3,7 +3,7 @@ with source as (
   ),
   renamed as (
       select
-          {{ adapter.quote("cc") }},
+        {{ adapter.quote("cc") }},
         {{ adapter.quote("time") }},
         {{ adapter.quote("family") }},
         {{ adapter.quote("rpki__vrp_count") }},

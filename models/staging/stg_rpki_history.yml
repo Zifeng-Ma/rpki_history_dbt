@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: raw_rpki_history
+  - name: stg_rpki_history
     description: ""
     columns:
       - name: cc

@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: project
+    tables:
+      - name: rpki_history
+        columns:
+          - name: cc
+          - name: time
+          - name: family
+          - name: rpki__vrp_count
+          - name: delegated__samples
+          - name: delegated__space__count
+          - name: delegated__space__covered_by_rpki__count
+          - name: delegated__prefixes__count
+          - name: delegated__prefixes__covered_by_rpki__count
+          - name: _dlt_load_id
+          - name: _dlt_id

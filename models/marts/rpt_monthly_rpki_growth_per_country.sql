@@ -9,6 +9,15 @@ select
     family as ip_version,
     toStartOfMonth({{ adapter.quote('time') }}) as month,
     round(
+        argMin(
+            delegated__space__covered_by_rpki__count
+            * 100.0
+            / delegated__space__count,
+            {{ adapter.quote('time') }}
+        ),
+        2
+    ) as start_of_month_coverage,
+    round(
         avg(
             delegated__space__covered_by_rpki__count
             * 100.0

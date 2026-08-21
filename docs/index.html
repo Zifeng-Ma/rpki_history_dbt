@@ -120,42 +120,26 @@
         <div id="chart-world-map" class="w-full h-[440px] rounded-xl"></div>
       </div>
 
-      <!-- Two-Column Grid for Graph 2 & Graph 3 -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        <!-- Graph 2: Top 10 RPKI Coverage Countries -->
-        <div class="glass-panel p-5 rounded-2xl space-y-3">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-              <i class="fa-solid fa-trophy text-amber-400"></i> Top 10 RPKI Coverage Countries
-            </h3>
-            <span class="text-xs text-slate-400 font-mono" id="label-top-cov-month">Latest Month</span>
+      <!-- Top 10 Fastest RPKI Coverage Growth Countries -->
+      <div class="glass-panel p-5 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-cyan-400"></i> Top 10 Fastest RPKI Growth Countries
+          </h3>
+          
+          <!-- Window Dropdown Selector -->
+          <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-3 py-1 rounded-lg">
+            <label for="select-window" class="text-xs text-slate-300 font-medium">Window:</label>
+            <select id="select-window" class="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded px-2 py-0.5 focus:ring-indigo-500 focus:border-indigo-500 font-mono">
+              <option value="1">1 Year</option>
+              <option value="2">2 Years</option>
+              <option value="3" selected>3 Years (Default)</option>
+              <option value="5">5 Years</option>
+              <option value="max">Max Available Range</option>
+            </select>
           </div>
-          <div id="chart-top-coverage" class="w-full h-[380px]"></div>
         </div>
-
-        <!-- Graph 3: Top 10 Fastest RPKI Coverage Growth Countries -->
-        <div class="glass-panel p-5 rounded-2xl space-y-3">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-              <i class="fa-solid fa-bolt text-cyan-400"></i> Top 10 Fastest RPKI Growth Countries
-            </h3>
-            
-            <!-- Window Dropdown Selector -->
-            <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-3 py-1 rounded-lg">
-              <label for="select-window" class="text-xs text-slate-300 font-medium">Window:</label>
-              <select id="select-window" class="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded px-2 py-0.5 focus:ring-indigo-500 focus:border-indigo-500 font-mono">
-                <option value="1">1 Year</option>
-                <option value="2">2 Years</option>
-                <option value="3" selected>3 Years (Default)</option>
-                <option value="5">5 Years</option>
-                <option value="max">Max Available Range</option>
-              </select>
-            </div>
-          </div>
-          <div id="chart-top-growth" class="w-full h-[380px]"></div>
-        </div>
-
+        <div id="chart-top-growth" class="w-full h-[380px]"></div>
       </div>
     </section>
 
@@ -200,13 +184,16 @@
           </div>
         </div>
 
-        <!-- Country Checkboxes Filter (2-Letter Code) -->
-        <div class="space-y-1.5">
-          <div class="flex items-center justify-between text-xs">
-            <label class="font-semibold text-slate-400 uppercase tracking-wider">
-              <i class="fa-solid fa-flag me-1"></i> Country Selector (2-Letter Country Code):
+        <!-- Country Checkboxes Filter with Search Bar -->
+        <div class="space-y-2">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+            <label class="font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-flag text-indigo-400"></i> Country Selector (2-Letter Code):
             </label>
-            <span class="text-[11px] text-slate-500 italic">Partial dataset handled automatically.</span>
+            <div class="relative w-full sm:w-64">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+              <input type="text" id="country-search" placeholder="Quick find country code or name..." class="w-full bg-slate-900 border border-slate-700/80 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder:text-slate-500" />
+            </div>
           </div>
           <div id="country-checkboxes" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-slate-900/80 border border-slate-700/60 rounded-xl">
             <span class="text-xs text-slate-500 p-1">Loading country list...</span>
@@ -221,39 +208,9 @@
           <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
             <i class="fa-solid fa-chart-area text-indigo-400"></i> RPKI Coverage Growth Over Time
           </h3>
-          <span class="text-xs text-slate-400">Drag timeline slider below chart to zoom</span>
+          <span class="text-xs text-slate-400">Timeline slider defaulted to 5 years (drag to zoom/pan)</span>
         </div>
         <div id="chart-main" class="w-full h-[450px]"></div>
-      </div>
-
-      <!-- Data Table Container -->
-      <div class="glass-panel p-5 rounded-2xl space-y-3">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-            <i class="fa-solid fa-table text-indigo-400"></i> Dataset Breakdown
-          </h3>
-          <input type="text" id="table-search" placeholder="Search country code or name..." class="bg-slate-900/90 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-64" />
-        </div>
-        
-        <div class="overflow-x-auto max-h-80 overflow-y-auto rounded-lg border border-slate-700/60">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="text-xs uppercase bg-slate-800/90 text-slate-400 sticky top-0 border-b border-slate-700">
-              <tr>
-                <th scope="col" class="px-4 py-3">Country (CC)</th>
-                <th scope="col" class="px-4 py-3">IP Version</th>
-                <th scope="col" class="px-4 py-3">Month</th>
-                <th scope="col" class="px-4 py-3 text-right">Start Coverage (%)</th>
-                <th scope="col" class="px-4 py-3 text-right">Avg Coverage (%)</th>
-                <th scope="col" class="px-4 py-3 text-right">Observed Days</th>
-              </tr>
-            </thead>
-            <tbody id="table-body" class="divide-y divide-slate-800">
-              <tr>
-                <td colspan="6" class="px-4 py-6 text-center text-slate-500">Loading data...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
 
     </section>
@@ -280,7 +237,6 @@
 
     // ECharts Instances
     let chartWorldMap = null;
-    let chartTopCoverage = null;
     let chartTopGrowth = null;
     let chartMain = null;
 
@@ -380,13 +336,13 @@
         await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
 
         // Fetch parquet file
-        const res = await fetch('data/rpki_monthly_growth.parquet');
+        const res = await fetch('data/rpki_history.parquet');
         if (!res.ok) {
           throw new Error(`Failed to load Parquet file: ${res.status} ${res.statusText}`);
         }
 
         const buffer = await res.arrayBuffer();
-        await db.registerFileBuffer('rpki_monthly_growth.parquet', new Uint8Array(buffer));
+        await db.registerFileBuffer('rpki_history.parquet', new Uint8Array(buffer));
 
         conn = await db.connect();
 
@@ -399,7 +355,7 @@
             start_of_month_coverage,
             avg_daily_coverage,
             observed_days
-          FROM 'rpki_monthly_growth.parquet'
+          FROM 'rpki_history.parquet'
           ORDER BY month ASC, cc ASC, ip_version ASC
         `;
 
@@ -430,13 +386,11 @@
     // Initialize all ECharts instances
     function initCharts() {
       chartWorldMap = echarts.init(document.getElementById('chart-world-map'), 'dark');
-      chartTopCoverage = echarts.init(document.getElementById('chart-top-coverage'), 'dark');
       chartTopGrowth = echarts.init(document.getElementById('chart-top-growth'), 'dark');
       chartMain = echarts.init(document.getElementById('chart-main'), 'dark');
 
       window.addEventListener('resize', () => {
         if (chartWorldMap) chartWorldMap.resize();
-        if (chartTopCoverage) chartTopCoverage.resize();
         if (chartTopGrowth) chartTopGrowth.resize();
         if (chartMain) chartMain.resize();
       });
@@ -454,6 +408,8 @@
         const fullName = getCountryName(cc);
         const isChecked = defaultSelected.includes(cc);
         const label = document.createElement('label');
+        label.dataset.cc = cc.toLowerCase();
+        label.dataset.name = fullName.toLowerCase();
         label.className = "group inline-flex items-center gap-1.5 bg-slate-800/90 text-xs px-2.5 py-1 rounded-lg text-slate-200 hover:bg-indigo-600 hover:text-white cursor-pointer border border-slate-700/60 hover:border-indigo-400 transition-all shadow-sm";
         label.title = `${fullName} (${cc})`;
         label.innerHTML = `
@@ -486,7 +442,6 @@
       const latestMonth = allMonths[allMonths.length - 1];
 
       document.getElementById('map-subtitle').innerText = `Month: ${latestMonth} | IPv${selectedIPVersion}`;
-      document.getElementById('label-top-cov-month').innerText = `Month: ${latestMonth}`;
 
       // 1. World Map Data
       const latestData = ipData.filter(d => d.month_str === latestMonth);
@@ -546,48 +501,7 @@
         }]
       }, true);
 
-      // 2. Top 10 RPKI Coverage Countries Bar Chart
-      const sortedCoverage = [...latestData].sort((a, b) => b.start_of_month_coverage - a.start_of_month_coverage).slice(0, 10).reverse();
-
-      chartTopCoverage.setOption({
-        backgroundColor: 'transparent',
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          backgroundColor: 'rgba(15, 23, 42, 0.95)',
-          borderColor: 'rgba(99, 102, 241, 0.6)',
-          borderWidth: 1,
-          padding: [10, 14],
-          textStyle: { color: '#f8fafc' },
-          extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); border-radius: 10px;',
-          formatter: (params) => {
-            const p = params[0];
-            return `<div class="font-bold text-sm text-slate-100 mb-1">${getCountryName(p.data.cc)} (${p.data.cc})</div>
-                    <div class="text-xs text-slate-300">Coverage: <span class="font-bold text-emerald-400 font-mono text-sm">${p.value}%</span></div>`;
-          }
-        },
-        grid: { left: '3%', right: '8%', bottom: '5%', top: '5%', containLabel: true },
-        xAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', color: '#94a3b8' }, splitLine: { lineStyle: { color: '#1e293b' } } },
-        yAxis: {
-          type: 'category',
-          data: sortedCoverage.map(d => `${d.cc} - ${getCountryName(d.cc)}`),
-          axisLabel: { color: '#f1f5f9', fontSize: 11, fontWeight: 500 }
-        },
-        series: [{
-          type: 'bar',
-          data: sortedCoverage.map(d => ({ value: d.start_of_month_coverage, cc: d.cc })),
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-              { offset: 0, color: '#0284c7' },
-              { offset: 1, color: '#10b981' }
-            ]),
-            borderRadius: [0, 4, 4, 0]
-          },
-          label: { show: true, position: 'right', formatter: '{c}%', color: '#38bdf8', fontSize: 11 }
-        }]
-      }, true);
-
-      // 3. Top 10 Fastest Growth Countries Bar Chart
+      // 2. Top 10 Fastest Growth Countries Bar Chart
       calculateAndRenderGrowth(ipData, allMonths, latestMonth);
     }
 
@@ -712,6 +626,19 @@
         };
       });
 
+      // Calculate 5-year default window for dataZoom slider
+      let startPercent = 0;
+      if (months.length > 0) {
+        const latestDate = new Date(months[months.length - 1]);
+        const fiveYearsAgo = new Date(latestDate);
+        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+        const fiveYearsAgoStr = fiveYearsAgo.toISOString().slice(0, 7) + '-01';
+
+        let startIndex = months.findIndex(m => m >= fiveYearsAgoStr);
+        if (startIndex === -1) startIndex = 0;
+        startPercent = Math.max(0, Math.round((startIndex / Math.max(1, months.length - 1)) * 100));
+      }
+
       chartMain.setOption({
         backgroundColor: 'transparent',
         tooltip: {
@@ -748,47 +675,11 @@
           axisLabel: { color: '#94a3b8', formatter: '{value}%' }
         },
         dataZoom: [
-          { type: 'inside', start: 0, end: 100 },
-          { type: 'slider', start: 0, end: 100, textStyle: { color: '#94a3b8' }, borderColor: '#334155' }
+          { type: 'inside', start: startPercent, end: 100 },
+          { type: 'slider', start: startPercent, end: 100, textStyle: { color: '#94a3b8' }, borderColor: '#334155' }
         ],
         series: seriesList
       }, true);
-
-      renderTable(filteredData);
-    }
-
-    // Render Data Table
-    function renderTable(data) {
-      const tbody = document.getElementById('table-body');
-      const searchTerm = document.getElementById('table-search').value.toLowerCase().trim();
-
-      const displayData = data.filter(d => {
-        const countryName = getCountryName(d.cc).toLowerCase();
-        return !searchTerm || d.cc.toLowerCase().includes(searchTerm) || countryName.includes(searchTerm) || d.month_str.includes(searchTerm);
-      });
-
-      if (displayData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">No records match the current selection.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = displayData.slice(0, 150).map(r => `
-        <tr class="hover:bg-slate-800/80 transition-colors group">
-          <td class="px-4 py-2.5 font-semibold text-slate-200">
-            <span class="font-mono text-indigo-400 group-hover:text-indigo-300 me-1.5">${r.cc}</span>
-            <span class="text-slate-200 group-hover:text-white font-medium">${getCountryName(r.cc)}</span>
-          </td>
-          <td class="px-4 py-2.5">
-            <span class="px-2 py-0.5 text-[10px] rounded font-mono ${Number(r.ip_version) === 4 ? 'bg-indigo-950 text-indigo-300 border border-indigo-700/50' : 'bg-purple-950 text-purple-300 border border-purple-700/50'}">
-              IPv${r.ip_version}
-            </span>
-          </td>
-          <td class="px-4 py-2.5 text-slate-400 font-mono">${r.month_str}</td>
-          <td class="px-4 py-2.5 text-right font-medium text-emerald-400">${r.start_of_month_coverage}%</td>
-          <td class="px-4 py-2.5 text-right font-medium text-cyan-400">${r.avg_daily_coverage}%</td>
-          <td class="px-4 py-2.5 text-right text-slate-400">${r.observed_days} days</td>
-        </tr>
-      `).join('');
     }
 
     // IP Version Switcher Listeners
@@ -850,7 +741,22 @@
       updateSection2();
     });
 
-    document.getElementById('table-search').addEventListener('input', updateSection2);
+    // Country Search Filter Listener
+    const countrySearchEl = document.getElementById('country-search');
+    if (countrySearchEl) {
+      countrySearchEl.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        document.querySelectorAll('#country-checkboxes label').forEach(label => {
+          const cc = label.dataset.cc || '';
+          const name = label.dataset.name || '';
+          if (!query || cc.includes(query) || name.includes(query)) {
+            label.style.display = 'inline-flex';
+          } else {
+            label.style.display = 'none';
+          }
+        });
+      });
+    }
 
     // Start App
     initDuckDB();

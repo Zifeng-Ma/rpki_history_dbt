@@ -164,7 +164,9 @@
           </div>
 
           <div class="flex items-center gap-2 text-xs">
-            <button id="btn-deselect-all-cc" class="text-indigo-400 hover:underline">Deselect All</button>
+            <button id="btn-deselect-all-cc" aria-label="Clear all" title="Clear all" class="h-7 px-3 inline-flex items-center justify-center rounded-lg bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 hover:bg-indigo-900 hover:text-white transition-all">
+              Clear
+            </button>
           </div>
         </div>
 
@@ -192,7 +194,7 @@
           <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
             <i class="fa-solid fa-chart-area text-indigo-400"></i> RPKI Coverage Change Over Time
           </h3>
-          <span class="text-xs text-slate-400">Timeline slider defaulted to 5 years (drag to zoom/pan)</span>
+          <span class="text-xs text-slate-400">Timeline slider defaulted to 3 years (drag to zoom/pan)</span>
         </div>
         <div id="chart-main" class="w-full h-[450px]"></div>
       </div>
@@ -203,7 +205,6 @@
           <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
             <i class="fa-solid fa-database text-emerald-400"></i> Latest RPKI Covered vs Delegated Space
           </h3>
-          <span class="text-xs text-slate-400">For the selected countries</span>
         </div>
         <div id="chart-space" class="w-full h-[430px]"></div>
       </div>
@@ -214,7 +215,7 @@
 
   <!-- Footer -->
   <footer class="mt-auto border-t border-slate-800 text-center text-xs text-slate-500 py-4">
-    <p>Powered by DuckDB-Wasm, Apache ECharts, dbt & ClickHouse pipeline.</p>
+    <p>Powered by Airflow, dbt, Clickhouse, ECharts & DuckDB-Wasm.</p>
   </footer>
 
   <!-- Script: DuckDB-Wasm & Dashboard Logic -->
@@ -441,7 +442,7 @@
       const allMonths = Array.from(new Set(ipData.map(d => d.month_str))).sort();
       const latestMonth = allMonths[allMonths.length - 1];
 
-      document.getElementById('map-subtitle').innerText = `Month: ${latestMonth} | IPv${selectedIPVersion}`;
+      document.getElementById('map-subtitle').innerText = `Latest Snapshot: ${latestMonth} | IPv${selectedIPVersion}`;
 
       // 1. World Map Data
       const latestData = ipData.filter(d => d.month_str === latestMonth);
@@ -604,15 +605,15 @@
         };
       });
 
-      // Calculate 5-year default window for dataZoom slider
+      // Calculate 3-year default window for dataZoom slider
       let startPercent = 0;
       if (months.length > 0) {
         const latestDate = new Date(months[months.length - 1]);
-        const fiveYearsAgo = new Date(latestDate);
-        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-        const fiveYearsAgoStr = fiveYearsAgo.toISOString().slice(0, 7) + '-01';
+        const threeYearsAgo = new Date(latestDate);
+        threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+        const threeYearsAgoStr = threeYearsAgo.toISOString().slice(0, 7) + '-01';
 
-        let startIndex = months.findIndex(m => m >= fiveYearsAgoStr);
+        let startIndex = months.findIndex(m => m >= threeYearsAgoStr);
         if (startIndex === -1) startIndex = 0;
         startPercent = Math.max(0, Math.round((startIndex / Math.max(1, months.length - 1)) * 100));
       }
@@ -628,7 +629,16 @@
           padding: [10, 14],
           textStyle: { color: '#f8fafc' },
           extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); border-radius: 10px;',
-          valueFormatter: (value) => value !== null ? `${value}%` : 'N/A'
+          formatter: (params) => {
+            const rankedParams = params
+              .filter(p => p.value !== null && p.value !== undefined && Number.isFinite(Number(p.value)))
+              .sort((a, b) => Number(b.value) - Number(a.value));
+            const title = params[0]?.axisValue || '';
+            const rows = rankedParams.map((p, index) =>
+              `${index + 1}. ${p.marker}${p.seriesName}: ${p.value}%`
+            );
+            return `${title}<br/>${rows.join('<br/>')}`;
+          }
         },
         legend: {
           type: 'scroll',

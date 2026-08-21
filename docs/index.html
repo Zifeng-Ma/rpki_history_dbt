@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Country Level RPKI History</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Apache ECharts CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .glass-panel {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.6);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="glass-panel sticky top-0 z-50 border-b border-slate-700/50 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+          <i class="fa-solid fa-globe text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-slate-100 tracking-tight">Country Level RPKI History</h1>
+          <p class="text-xs text-slate-400">Global and regional insights on RPKI route origin validation coverage</p>
+        </div>
+      </div>
+      
+      <!-- Global IP Version Selector (IPv6 Default) -->
+      <div class="flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 px-4 py-2 rounded-xl shadow-inner">
+        <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+          <i class="fa-solid fa-network-wired text-indigo-400"></i> IP Version:
+        </span>
+        <div class="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+          <button id="btn-ip-v6" class="px-3.5 py-1 text-xs font-semibold rounded-md transition-all bg-indigo-600 text-white shadow-md">IPv6 (Default)</button>
+          <button id="btn-ip-v4" class="px-3.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200">IPv4</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-6 py-6 space-y-8">
+
+    <!-- Status Banner for Loading -->
+    <div id="loading-status" class="glass-panel p-4 rounded-xl flex items-center justify-between text-sm text-slate-300">
+      <div class="flex items-center gap-3">
+        <div class="animate-spin text-indigo-400 text-lg">
+          <i class="fa-solid fa-circle-notch"></i>
+        </div>
+        <div>
+          <span class="font-medium text-slate-200">Initializing DuckDB-Wasm & Loading Parquet dataset...</span>
+          <p class="text-xs text-slate-400">Reading <code class="text-slate-300 font-mono">data/rpki_history.parquet</code> client-side in browser.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Banner (Hidden by default) -->
+    <div id="error-status" class="hidden glass-panel border-red-500/40 p-4 rounded-xl text-sm text-red-200 bg-red-950/20">
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-triangle-exclamation text-red-400 text-lg mt-0.5"></i>
+        <div>
+          <span class="font-semibold text-red-300">Data Loading Error</span>
+          <p id="error-message" class="text-xs text-red-300/80 mt-1"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 1: General Information -->
+    <section class="space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+            <i class="fa-solid fa-earth-americas text-indigo-400"></i> General Information
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Global overview and country rankings for RPKI validation coverage</p>
+        </div>
+        <span id="label-current-ip" class="text-xs font-mono px-2.5 py-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/50">Showing IPv6</span>
+      </div>
+
+      <!-- Graph 1: World Map -->
+      <div class="glass-panel p-5 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-globe text-emerald-400"></i> Global RPKI Coverage Map
+          </h3>
+          <span id="map-subtitle" class="text-xs text-slate-400 font-mono"></span>
+        </div>
+        <div id="chart-world-map" class="w-full h-[440px] rounded-xl"></div>
+      </div>
+
+      <!-- Two-Column Grid for Graph 2 & Graph 3 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Graph 2: Top 10 RPKI Coverage Countries -->
+        <div class="glass-panel p-5 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-trophy text-amber-400"></i> Top 10 RPKI Coverage Countries
+            </h3>
+            <span class="text-xs text-slate-400 font-mono" id="label-top-cov-month">Latest Month</span>
+          </div>
+          <div id="chart-top-coverage" class="w-full h-[380px]"></div>
+        </div>
+
+        <!-- Graph 3: Top 10 Fastest RPKI Coverage Growth Countries -->
+        <div class="glass-panel p-5 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-bolt text-cyan-400"></i> Top 10 Fastest RPKI Growth Countries
+            </h3>
+            
+            <!-- Window Dropdown Selector -->
+            <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-3 py-1 rounded-lg">
+              <label for="select-window" class="text-xs text-slate-300 font-medium">Window:</label>
+              <select id="select-window" class="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded px-2 py-0.5 focus:ring-indigo-500 focus:border-indigo-500 font-mono">
+                <option value="1">1 Year</option>
+                <option value="2">2 Years</option>
+                <option value="3" selected>3 Years (Default)</option>
+                <option value="5">5 Years</option>
+                <option value="max">Max Available Range</option>
+              </select>
+            </div>
+          </div>
+          <div id="chart-top-growth" class="w-full h-[380px]"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 2: Selected Countries or Regions -->
+    <section class="space-y-6 pt-4 border-t border-slate-800">
+      <div>
+        <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-chart-line text-indigo-400"></i> Selected Countries or Regions
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">Show RPKI Coverage History of the selected countries or regions</p>
+      </div>
+
+      <!-- Controls & Region Filters Panel -->
+      <div class="glass-panel p-5 rounded-2xl space-y-4">
+        
+        <!-- Region Presets -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="font-semibold text-slate-400 uppercase tracking-wider me-1">
+              <i class="fa-solid fa-layer-group text-indigo-400 me-1"></i> Fast Lookup Regions:
+            </span>
+            <button id="btn-region-capif" class="px-3 py-1.5 rounded-lg bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 hover:bg-indigo-900 font-medium transition-all flex items-center gap-1.5">
+              <span>CAPIF</span>
+              <span class="text-[10px] text-indigo-400/80 bg-indigo-900/60 px-1.5 py-0.5 rounded font-mono">IR, KZ, KG, TJ, TM, UZ</span>
+            </button>
+            <button id="btn-region-see" class="px-3 py-1.5 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 hover:bg-emerald-900 font-medium transition-all flex items-center gap-1.5">
+              <span>SEE</span>
+              <span class="text-[10px] text-emerald-400/80 bg-emerald-900/60 px-1.5 py-0.5 rounded font-mono">AL, BA, HR, XK, ME, MK, RS, SI</span>
+            </button>
+            <button id="btn-region-menog" class="px-3 py-1.5 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-700/60 hover:bg-cyan-900 font-medium transition-all flex items-center gap-1.5">
+              <span>MENOG</span>
+              <span class="text-[10px] text-cyan-400/80 bg-cyan-900/60 px-1.5 py-0.5 rounded font-mono">BH, EG, IR, IQ, JO, KW, LB, OM, PS, QA, SA, SY, TR, AE, YE</span>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs">
+            <button id="btn-select-all-cc" class="text-indigo-400 hover:underline">Select All</button>
+            <span class="text-slate-600">|</span>
+            <button id="btn-deselect-all-cc" class="text-indigo-400 hover:underline">Deselect All</button>
+            <span class="text-slate-600">|</span>
+            <button id="btn-top-5-cc" class="text-indigo-400 hover:underline">Select Top 5</button>
+          </div>
+        </div>
+
+        <!-- Country Checkboxes Filter (2-Letter Code) -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between text-xs">
+            <label class="font-semibold text-slate-400 uppercase tracking-wider">
+              <i class="fa-solid fa-flag me-1"></i> Country Selector (2-Letter Country Code):
+            </label>
+            <span class="text-[11px] text-slate-500 italic">Partial dataset handled automatically.</span>
+          </div>
+          <div id="country-checkboxes" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-slate-900/80 border border-slate-700/60 rounded-xl">
+            <span class="text-xs text-slate-500 p-1">Loading country list...</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Time-Series Line Chart Container -->
+      <div class="glass-panel p-5 rounded-2xl relative">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-chart-area text-indigo-400"></i> RPKI Coverage Growth Over Time
+          </h3>
+          <span class="text-xs text-slate-400">Drag timeline slider below chart to zoom</span>
+        </div>
+        <div id="chart-main" class="w-full h-[450px]"></div>
+      </div>
+
+      <!-- Data Table Container -->
+      <div class="glass-panel p-5 rounded-2xl space-y-3">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-table text-indigo-400"></i> Dataset Breakdown
+          </h3>
+          <input type="text" id="table-search" placeholder="Search country code or name..." class="bg-slate-900/90 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-64" />
+        </div>
+        
+        <div class="overflow-x-auto max-h-80 overflow-y-auto rounded-lg border border-slate-700/60">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="text-xs uppercase bg-slate-800/90 text-slate-400 sticky top-0 border-b border-slate-700">
+              <tr>
+                <th scope="col" class="px-4 py-3">Country (CC)</th>
+                <th scope="col" class="px-4 py-3">IP Version</th>
+                <th scope="col" class="px-4 py-3">Month</th>
+                <th scope="col" class="px-4 py-3 text-right">Start Coverage (%)</th>
+                <th scope="col" class="px-4 py-3 text-right">Avg Coverage (%)</th>
+                <th scope="col" class="px-4 py-3 text-right">Observed Days</th>
+              </tr>
+            </thead>
+            <tbody id="table-body" class="divide-y divide-slate-800">
+              <tr>
+                <td colspan="6" class="px-4 py-6 text-center text-slate-500">Loading data...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-800 text-center text-xs text-slate-500 py-4">
+    <p>Powered by DuckDB-Wasm, Apache ECharts, dbt & ClickHouse pipeline.</p>
+  </footer>
+
+  <!-- Script: DuckDB-Wasm & Dashboard Logic -->
+  <script type="module">
+    import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm';
+
+    let db = null;
+    let conn = null;
+    let rawDataset = [];
+    let availableCountries = [];
+
+    // Global State
+    let selectedIPVersion = 6; // IPv6 default
+    let selectedGrowthWindow = 3; // 3 years default
+
+    // ECharts Instances
+    let chartWorldMap = null;
+    let chartTopCoverage = null;
+    let chartTopGrowth = null;
+    let chartMain = null;
+
+    // Region Presets (2-Letter Country Codes)
+    const REGION_PRESETS = {
+      CAPIF: ['IR', 'KZ', 'KG', 'TJ', 'TM', 'UZ'],
+      SEE: ['AL', 'BA', 'HR', 'XK', 'ME', 'MK', 'RS', 'SI'],
+      MENOG: ['BH', 'EG', 'IR', 'IQ', 'JO', 'KW', 'LB', 'OM', 'PS', 'QA', 'SA', 'SY', 'TR', 'AE', 'YE']
+    };
+
+    // Standard Country Name Formatter
+    const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+    function getCountryName(cc) {
+      if (cc === 'XK') return 'Kosovo';
+      try {
+        return displayNames.of(cc) || cc;
+      } catch (e) {
+        return cc;
+      }
+    }
+
+    // Mapping 2-Letter Codes to ECharts World Map Feature Names
+    const CC_TO_MAP_NAME = {
+      'AF': 'Afghanistan', 'AL': 'Albania', 'DZ': 'Algeria', 'AO': 'Angola', 'AR': 'Argentina',
+      'AM': 'Armenia', 'AU': 'Australia', 'AT': 'Austria', 'AZ': 'Azerbaijan', 'BS': 'Bahamas',
+      'BH': 'Bahrain', 'BD': 'Bangladesh', 'BY': 'Belarus', 'BE': 'Belgium', 'BZ': 'Belize',
+      'BJ': 'Benin', 'BT': 'Bhutan', 'BO': 'Bolivia', 'BA': 'Bosnia and Herz.', 'BW': 'Botswana',
+      'BR': 'Brazil', 'BN': 'Brunei', 'BG': 'Bulgaria', 'BF': 'Burkina Faso', 'BI': 'Burundi',
+      'KH': 'Cambodia', 'CM': 'Cameroon', 'CA': 'Canada', 'CF': 'Central African Rep.', 'TD': 'Chad',
+      'CL': 'Chile', 'CN': 'China', 'CO': 'Colombia', 'CG': 'Congo', 'CR': 'Costa Rica',
+      'HR': 'Croatia', 'CU': 'Cuba', 'CY': 'Cyprus', 'CZ': 'Czech Rep.', 'CI': "Côte d'Ivoire",
+      'CD': 'Dem. Rep. Congo', 'KP': 'Dem. Rep. Korea', 'DK': 'Denmark', 'DJ': 'Djibouti',
+      'DO': 'Dominican Rep.', 'EC': 'Ecuador', 'EG': 'Egypt', 'SV': 'El Salvador', 'GQ': 'Eq. Guinea',
+      'ER': 'Eritrea', 'EE': 'Estonia', 'ET': 'Ethiopia', 'FJ': 'Fiji', 'FI': 'Finland',
+      'FR': 'France', 'GA': 'Gabon', 'GM': 'Gambia', 'GE': 'Georgia', 'DE': 'Germany',
+      'GH': 'Ghana', 'GR': 'Greece', 'GL': 'Greenland', 'GT': 'Guatemala', 'GN': 'Guinea',
+      'GW': 'Guinea-Bissau', 'GY': 'Guyana', 'HT': 'Haiti', 'HN': 'Honduras', 'HU': 'Hungary',
+      'IS': 'Iceland', 'IN': 'India', 'ID': 'Indonesia', 'IR': 'Iran', 'IQ': 'Iraq',
+      'IE': 'Ireland', 'IL': 'Israel', 'IT': 'Italy', 'JM': 'Jamaica', 'JP': 'Japan',
+      'JO': 'Jordan', 'KZ': 'Kazakhstan', 'KE': 'Kenya', 'KR': 'Korea', 'KW': 'Kuwait',
+      'KG': 'Kyrgyzstan', 'LA': 'Lao PDR', 'LV': 'Latvia', 'LB': 'Lebanon', 'LS': 'Lesotho',
+      'LR': 'Liberia', 'LY': 'Libya', 'LT': 'Lithuania', 'LU': 'Luxembourg', 'MK': 'Macedonia',
+      'MG': 'Madagascar', 'MW': 'Malawi', 'MY': 'Malaysia', 'ML': 'Mali', 'MR': 'Mauritania',
+      'MX': 'Mexico', 'MD': 'Moldova', 'MN': 'Mongolia', 'ME': 'Montenegro', 'MA': 'Morocco',
+      'MZ': 'Mozambique', 'MM': 'Myanmar', 'NA': 'Namibia', 'NP': 'Nepal', 'NL': 'Netherlands',
+      'NC': 'New Caledonia', 'NZ': 'New Zealand', 'NI': 'Nicaragua', 'NE': 'Niger', 'NG': 'Nigeria',
+      'NO': 'Norway', 'OM': 'Oman', 'PK': 'Pakistan', 'PS': 'Palestine', 'PA': 'Panama',
+      'PG': 'Papua New Guinea', 'PY': 'Paraguay', 'PE': 'Peru', 'PH': 'Philippines', 'PL': 'Poland',
+      'PT': 'Portugal', 'PR': 'Puerto Rico', 'QA': 'Qatar', 'RO': 'Romania', 'RU': 'Russia',
+      'RW': 'Rwanda', 'SA': 'Saudi Arabia', 'SN': 'Senegal', 'RS': 'Serbia', 'SL': 'Sierra Leone',
+      'SG': 'Singapore', 'SK': 'Slovakia', 'SI': 'Slovenia', 'SB': 'Solomon Is.', 'SO': 'Somalia',
+      'ZA': 'South Africa', 'ES': 'Spain', 'LK': 'Sri Lanka', 'SD': 'Sudan', 'SS': 'S. Sudan',
+      'SR': 'Suriname', 'SZ': 'Swaziland', 'SE': 'Sweden', 'CH': 'Switzerland', 'SY': 'Syria',
+      'TJ': 'Tajikistan', 'TZ': 'Tanzania', 'TH': 'Thailand', 'TL': 'Timor-Leste', 'TG': 'Togo',
+      'TT': 'Trinidad and Tobago', 'TN': 'Tunisia', 'TR': 'Turkey', 'TM': 'Turkmenistan',
+      'UG': 'Uganda', 'UA': 'Ukraine', 'AE': 'United Arab Emirates', 'GB': 'United Kingdom',
+      'US': 'United States', 'UY': 'Uruguay', 'UZ': 'Uzbekistan', 'VE': 'Venezuela', 'VN': 'Vietnam',
+      'EH': 'W. Sahara', 'YE': 'Yemen', 'ZM': 'Zambia', 'ZW': 'Zimbabwe', 'XK': 'Kosovo'
+    };
+
+    const loadingStatusEl = document.getElementById('loading-status');
+    const errorStatusEl = document.getElementById('error-status');
+    const errorMessageEl = document.getElementById('error-message');
+
+    // Fetch ECharts World Map GeoJSON
+    async function loadWorldMapGeoJson() {
+      try {
+        const res = await fetch('https://fastly.jsdelivr.net/gh/apache/echarts-website@asf-site/examples/data/asset/geo/world.json');
+        if (res.ok) {
+          const geoJson = await res.json();
+          echarts.registerMap('world', geoJson);
+        } else {
+          console.warn("Failed to load world map GeoJSON from primary CDN");
+        }
+      } catch (err) {
+        console.warn("Could not fetch world map GeoJSON", err);
+      }
+    }
+
+    // Initialize DuckDB-Wasm and Query Parquet
+    async function initDuckDB() {
+      try {
+        // Load GeoJSON and DuckDB concurrently
+        const [_, JSDELIVR_BUNDLES] = await Promise.all([
+          loadWorldMapGeoJson(),
+          duckdb.getJsDelivrBundles()
+        ]);
+
+        const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+        const worker_url = URL.createObjectURL(
+          new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+        );
+
+        const worker = new Worker(worker_url);
+        const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
+        db = new duckdb.AsyncDuckDB(logger, worker);
+        await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+
+        // Fetch parquet file
+        const res = await fetch('data/rpki_monthly_growth.parquet');
+        if (!res.ok) {
+          throw new Error(`Failed to load Parquet file: ${res.status} ${res.statusText}`);
+        }
+
+        const buffer = await res.arrayBuffer();
+        await db.registerFileBuffer('rpki_monthly_growth.parquet', new Uint8Array(buffer));
+
+        conn = await db.connect();
+
+        // Query parquet using DuckDB SQL
+        const query = `
+          SELECT 
+            cc,
+            ip_version,
+            CAST(month AS STRING) as month_str,
+            start_of_month_coverage,
+            avg_daily_coverage,
+            observed_days
+          FROM 'rpki_monthly_growth.parquet'
+          ORDER BY month ASC, cc ASC, ip_version ASC
+        `;
+
+        const queryResult = await conn.query(query);
+        rawDataset = queryResult.toArray().map(row => row.toJSON());
+
+        if (rawDataset.length === 0) {
+          throw new Error("Parquet dataset is empty.");
+        }
+
+        loadingStatusEl.classList.add('hidden');
+
+        // Extract available country codes
+        availableCountries = Array.from(new Set(rawDataset.map(d => d.cc))).sort();
+
+        initCharts();
+        renderCountryCheckboxes();
+        updateAllVisualizations();
+
+      } catch (err) {
+        console.error("Initialization error:", err);
+        loadingStatusEl.classList.add('hidden');
+        errorStatusEl.classList.remove('hidden');
+        errorMessageEl.innerText = `${err.message}. If running locally without a web server, serve via \`python3 -m http.server 8000 -d docs\`.`;
+      }
+    }
+
+    // Initialize all ECharts instances
+    function initCharts() {
+      chartWorldMap = echarts.init(document.getElementById('chart-world-map'), 'dark');
+      chartTopCoverage = echarts.init(document.getElementById('chart-top-coverage'), 'dark');
+      chartTopGrowth = echarts.init(document.getElementById('chart-top-growth'), 'dark');
+      chartMain = echarts.init(document.getElementById('chart-main'), 'dark');
+
+      window.addEventListener('resize', () => {
+        if (chartWorldMap) chartWorldMap.resize();
+        if (chartTopCoverage) chartTopCoverage.resize();
+        if (chartTopGrowth) chartTopGrowth.resize();
+        if (chartMain) chartMain.resize();
+      });
+    }
+
+    // Render Country Checkboxes (2-Letter Codes)
+    function renderCountryCheckboxes() {
+      const container = document.getElementById('country-checkboxes');
+      container.innerHTML = '';
+
+      // Default select top 5 or all if <= 5
+      const defaultSelected = availableCountries.slice(0, 5);
+
+      availableCountries.forEach(cc => {
+        const fullName = getCountryName(cc);
+        const isChecked = defaultSelected.includes(cc);
+        const label = document.createElement('label');
+        label.className = "group inline-flex items-center gap-1.5 bg-slate-800/90 text-xs px-2.5 py-1 rounded-lg text-slate-200 hover:bg-indigo-600 hover:text-white cursor-pointer border border-slate-700/60 hover:border-indigo-400 transition-all shadow-sm";
+        label.title = `${fullName} (${cc})`;
+        label.innerHTML = `
+          <input type="checkbox" value="${cc}" class="cc-checkbox rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-indigo-500" ${isChecked ? 'checked' : ''} />
+          <span class="font-mono font-bold text-slate-100 group-hover:text-white">${cc}</span>
+          <span class="text-[10px] text-slate-300 group-hover:text-white font-medium truncate max-w-[100px] transition-colors">${fullName}</span>
+        `;
+        container.appendChild(label);
+      });
+
+      container.querySelectorAll('.cc-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSection2);
+      });
+    }
+
+    // Master update dispatcher
+    function updateAllVisualizations() {
+      document.getElementById('label-current-ip').innerText = `Showing IPv${selectedIPVersion}`;
+      updateSection1();
+      updateSection2();
+    }
+
+    // Update SECTION 1: General Information (Map, Top Coverage, Top Growth)
+    function updateSection1() {
+      // Filter dataset by current IP version
+      const ipData = rawDataset.filter(d => Number(d.ip_version) === selectedIPVersion);
+      if (ipData.length === 0) return;
+
+      const allMonths = Array.from(new Set(ipData.map(d => d.month_str))).sort();
+      const latestMonth = allMonths[allMonths.length - 1];
+
+      document.getElementById('map-subtitle').innerText = `Month: ${latestMonth} | IPv${selectedIPVersion}`;
+      document.getElementById('label-top-cov-month').innerText = `Month: ${latestMonth}`;
+
+      // 1. World Map Data
+      const latestData = ipData.filter(d => d.month_str === latestMonth);
+      const mapSeriesData = latestData.map(d => ({
+        name: CC_TO_MAP_NAME[d.cc] || getCountryName(d.cc),
+        value: d.start_of_month_coverage,
+        cc: d.cc,
+        month: d.month_str
+      }));
+
+      chartWorldMap.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'item',
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          borderColor: 'rgba(99, 102, 241, 0.6)',
+          borderWidth: 1,
+          padding: [10, 14],
+          textStyle: { color: '#f8fafc' },
+          extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); border-radius: 10px;',
+          formatter: (params) => {
+            if (params.data) {
+              return `<div class="font-bold text-sm text-slate-100 mb-1">${getCountryName(params.data.cc)} (${params.data.cc})</div>
+                      <div class="text-xs text-slate-300">Month: <span class="font-mono text-indigo-300 font-medium">${params.data.month}</span></div>
+                      <div class="text-xs text-slate-300">RPKI Coverage: <span class="font-bold text-emerald-400 font-mono text-sm">${params.data.value}%</span></div>`;
+            }
+            return params.name ? `<div class="font-bold text-slate-200">${params.name}</div><div class="text-xs text-slate-400">No data available</div>` : '';
+          }
+        },
+        visualMap: {
+          min: 0,
+          max: 100,
+          left: 'left',
+          bottom: 'bottom',
+          text: ['100%', '0%'],
+          calculable: true,
+          inRange: {
+            color: ['#1e1b4b', '#312e81', '#4338ca', '#0284c7', '#059669', '#10b981']
+          },
+          textStyle: { color: '#94a3b8' }
+        },
+        series: [{
+          name: 'RPKI Coverage',
+          type: 'map',
+          map: 'world',
+          roam: true,
+          label: { show: false },
+          emphasis: {
+            label: { show: false },
+            itemStyle: { areaColor: '#6366f1' }
+          },
+          itemStyle: {
+            borderColor: '#334155',
+            areaColor: '#1e293b'
+          },
+          data: mapSeriesData
+        }]
+      }, true);
+
+      // 2. Top 10 RPKI Coverage Countries Bar Chart
+      const sortedCoverage = [...latestData].sort((a, b) => b.start_of_month_coverage - a.start_of_month_coverage).slice(0, 10).reverse();
+
+      chartTopCoverage.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          borderColor: 'rgba(99, 102, 241, 0.6)',
+          borderWidth: 1,
+          padding: [10, 14],
+          textStyle: { color: '#f8fafc' },
+          extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); border-radius: 10px;',
+          formatter: (params) => {
+            const p = params[0];
+            return `<div class="font-bold text-sm text-slate-100 mb-1">${getCountryName(p.data.cc)} (${p.data.cc})</div>
+                    <div class="text-xs text-slate-300">Coverage: <span class="font-bold text-emerald-400 font-mono text-sm">${p.value}%</span></div>`;
+          }
+        },
+        grid: { left: '3%', right: '8%', bottom: '5%', top: '5%', containLabel: true },
+        xAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', color: '#94a3b8' }, splitLine: { lineStyle: { color: '#1e293b' } } },
+        yAxis: {
+          type: 'category',
+          data: sortedCoverage.map(d => `${d.cc} - ${getCountryName(d.cc)}`),
+          axisLabel: { color: '#f1f5f9', fontSize: 11, fontWeight: 500 }
+        },
+        series: [{
+          type: 'bar',
+          data: sortedCoverage.map(d => ({ value: d.start_of_month_coverage, cc: d.cc })),
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+              { offset: 0, color: '#0284c7' },
+              { offset: 1, color: '#10b981' }
+            ]),
+            borderRadius: [0, 4, 4, 0]
+          },
+          label: { show: true, position: 'right', formatter: '{c}%', color: '#38bdf8', fontSize: 11 }
+        }]
+      }, true);
+
+      // 3. Top 10 Fastest Growth Countries Bar Chart
+      calculateAndRenderGrowth(ipData, allMonths, latestMonth);
+    }
+
+    // Calculate Growth based on Window selection
+    function calculateAndRenderGrowth(ipData, allMonths, latestMonth) {
+      const windowVal = document.getElementById('select-window').value;
+      const latestDate = new Date(latestMonth);
+      
+      let targetStartDateStr = null;
+      if (windowVal !== 'max') {
+        const years = parseInt(windowVal);
+        const targetDate = new Date(latestDate);
+        targetDate.setFullYear(targetDate.getFullYear() - years);
+        targetStartDateStr = targetDate.toISOString().slice(0, 7) + '-01';
+      }
+
+      // Determine best start month
+      let startMonth = allMonths[0]; // Default to earliest
+      if (targetStartDateStr) {
+        const candidates = allMonths.filter(m => m <= targetStartDateStr);
+        if (candidates.length > 0) {
+          startMonth = candidates[candidates.length - 1];
+        }
+      }
+
+      // Group by country
+      const growthList = [];
+      availableCountries.forEach(cc => {
+        const cLatest = ipData.find(d => d.cc === cc && d.month_str === latestMonth);
+        const cStart = ipData.find(d => d.cc === cc && d.month_str === startMonth);
+
+        if (cLatest && cStart) {
+          const growth = parseFloat((cLatest.start_of_month_coverage - cStart.start_of_month_coverage).toFixed(2));
+          growthList.push({
+            cc,
+            countryName: getCountryName(cc),
+            growth,
+            startCov: cStart.start_of_month_coverage,
+            latestCov: cLatest.start_of_month_coverage,
+            startMonth,
+            latestMonth
+          });
+        }
+      });
+
+      const sortedGrowth = growthList.sort((a, b) => b.growth - a.growth).slice(0, 10).reverse();
+
+      chartTopGrowth.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          borderColor: 'rgba(99, 102, 241, 0.6)',
+          borderWidth: 1,
+          padding: [10, 14],
+          textStyle: { color: '#f8fafc' },
+          extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); border-radius: 10px;',
+          formatter: (params) => {
+            const d = params[0].data;
+            return `<div class="font-bold text-sm text-slate-100 mb-1">${d.countryName} (${d.cc})</div>
+                    <div class="text-xs text-slate-300">Period: <span class="font-mono text-indigo-300">${d.startMonth}</span> to <span class="font-mono text-indigo-300">${d.latestMonth}</span></div>
+                    <div class="text-xs text-slate-300">Start Coverage: <span class="font-mono">${d.startCov}%</span></div>
+                    <div class="text-xs text-slate-300">Latest Coverage: <span class="font-mono">${d.latestCov}%</span></div>
+                    <div class="text-xs mt-1 font-bold ${d.growth >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                      Growth: ${d.growth >= 0 ? '+' : ''}${d.growth}% pts
+                    </div>`;
+          }
+        },
+        grid: { left: '3%', right: '10%', bottom: '5%', top: '5%', containLabel: true },
+        xAxis: { type: 'value', axisLabel: { formatter: '{value}%', color: '#94a3b8' }, splitLine: { lineStyle: { color: '#1e293b' } } },
+        yAxis: {
+          type: 'category',
+          data: sortedGrowth.map(d => `${d.cc} - ${d.countryName}`),
+          axisLabel: { color: '#f1f5f9', fontSize: 11, fontWeight: 500 }
+        },
+        series: [{
+          type: 'bar',
+          data: sortedGrowth.map(d => ({ ...d, value: d.growth })),
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+              { offset: 0, color: '#4338ca' },
+              { offset: 1, color: '#a855f7' }
+            ]),
+            borderRadius: [0, 4, 4, 0]
+          },
+          label: {
+            show: true,
+            position: 'right',
+            formatter: (params) => `${params.value >= 0 ? '+' : ''}${params.value}%`,
+            color: '#c084fc',
+            fontSize: 11
+          }
+        }]
+      }, true);
+    }
+
+    // Update SECTION 2: Selected Countries or Regions (Line Chart & Breakdown Table)
+    function updateSection2() {
+      const selectedCCs = Array.from(document.querySelectorAll('.cc-checkbox:checked')).map(cb => cb.value);
+      
+      const filteredData = rawDataset.filter(d => {
+        const matchesIP = Number(d.ip_version) === selectedIPVersion;
+        const matchesCC = selectedCCs.includes(d.cc);
+        return matchesIP && matchesCC;
+      });
+
+      const months = Array.from(new Set(rawDataset.map(d => d.month_str))).sort();
+
+      const seriesList = selectedCCs.map(cc => {
+        const seriesData = months.map(m => {
+          const row = filteredData.find(d => d.cc === cc && d.month_str === m);
+          return row ? row.start_of_month_coverage : null;
+        });
+
+        return {
+          name: `${cc} (${getCountryName(cc)})`,
+          type: 'line',
+          smooth: true,
+          symbolSize: 6,
+          data: seriesData
+        };
+      });
+
+      chartMain.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'cross' },
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          borderColor: 'rgba(99, 102, 241, 0.6)',
+          borderWidth: 1,
+          padding: [10, 14],
+          textStyle: { color: '#f8fafc' },
+          extraCssText: 'box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); border-radius: 10px;',
+          valueFormatter: (value) => value !== null ? `${value}%` : 'N/A'
+        },
+        legend: {
+          type: 'scroll',
+          top: 0,
+          textStyle: { color: '#94a3b8' }
+        },
+        grid: { left: '3%', right: '4%', bottom: '15%', top: '12%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: months,
+          axisLine: { lineStyle: { color: '#475569' } },
+          axisLabel: { color: '#94a3b8' }
+        },
+        yAxis: {
+          type: 'value',
+          min: 0,
+          max: 100,
+          name: '% Coverage',
+          axisLine: { lineStyle: { color: '#475569' } },
+          splitLine: { lineStyle: { color: '#1e293b' } },
+          axisLabel: { color: '#94a3b8', formatter: '{value}%' }
+        },
+        dataZoom: [
+          { type: 'inside', start: 0, end: 100 },
+          { type: 'slider', start: 0, end: 100, textStyle: { color: '#94a3b8' }, borderColor: '#334155' }
+        ],
+        series: seriesList
+      }, true);
+
+      renderTable(filteredData);
+    }
+
+    // Render Data Table
+    function renderTable(data) {
+      const tbody = document.getElementById('table-body');
+      const searchTerm = document.getElementById('table-search').value.toLowerCase().trim();
+
+      const displayData = data.filter(d => {
+        const countryName = getCountryName(d.cc).toLowerCase();
+        return !searchTerm || d.cc.toLowerCase().includes(searchTerm) || countryName.includes(searchTerm) || d.month_str.includes(searchTerm);
+      });
+
+      if (displayData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">No records match the current selection.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = displayData.slice(0, 150).map(r => `
+        <tr class="hover:bg-slate-800/80 transition-colors group">
+          <td class="px-4 py-2.5 font-semibold text-slate-200">
+            <span class="font-mono text-indigo-400 group-hover:text-indigo-300 me-1.5">${r.cc}</span>
+            <span class="text-slate-200 group-hover:text-white font-medium">${getCountryName(r.cc)}</span>
+          </td>
+          <td class="px-4 py-2.5">
+            <span class="px-2 py-0.5 text-[10px] rounded font-mono ${Number(r.ip_version) === 4 ? 'bg-indigo-950 text-indigo-300 border border-indigo-700/50' : 'bg-purple-950 text-purple-300 border border-purple-700/50'}">
+              IPv${r.ip_version}
+            </span>
+          </td>
+          <td class="px-4 py-2.5 text-slate-400 font-mono">${r.month_str}</td>
+          <td class="px-4 py-2.5 text-right font-medium text-emerald-400">${r.start_of_month_coverage}%</td>
+          <td class="px-4 py-2.5 text-right font-medium text-cyan-400">${r.avg_daily_coverage}%</td>
+          <td class="px-4 py-2.5 text-right text-slate-400">${r.observed_days} days</td>
+        </tr>
+      `).join('');
+    }
+
+    // IP Version Switcher Listeners
+    const btnIPv6 = document.getElementById('btn-ip-v6');
+    const btnIPv4 = document.getElementById('btn-ip-v4');
+
+    btnIPv6.addEventListener('click', () => {
+      selectedIPVersion = 6;
+      btnIPv6.className = "px-3.5 py-1 text-xs font-semibold rounded-md transition-all bg-indigo-600 text-white shadow-md";
+      btnIPv4.className = "px-3.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200";
+      updateAllVisualizations();
+    });
+
+    btnIPv4.addEventListener('click', () => {
+      selectedIPVersion = 4;
+      btnIPv4.className = "px-3.5 py-1 text-xs font-semibold rounded-md transition-all bg-indigo-600 text-white shadow-md";
+      btnIPv6.className = "px-3.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200";
+      updateAllVisualizations();
+    });
+
+    // Window Selector Listener
+    document.getElementById('select-window').addEventListener('change', (e) => {
+      selectedGrowthWindow = e.target.value;
+      const ipData = rawDataset.filter(d => Number(d.ip_version) === selectedIPVersion);
+      const allMonths = Array.from(new Set(ipData.map(d => d.month_str))).sort();
+      const latestMonth = allMonths[allMonths.length - 1];
+      calculateAndRenderGrowth(ipData, allMonths, latestMonth);
+    });
+
+    // Region Preset Buttons
+    function applyRegionPreset(regionKey) {
+      const presetCCs = REGION_PRESETS[regionKey] || [];
+      document.querySelectorAll('.cc-checkbox').forEach(cb => {
+        cb.checked = presetCCs.includes(cb.value);
+      });
+      updateSection2();
+    }
+
+    document.getElementById('btn-region-capif').addEventListener('click', () => applyRegionPreset('CAPIF'));
+    document.getElementById('btn-region-see').addEventListener('click', () => applyRegionPreset('SEE'));
+    document.getElementById('btn-region-menog').addEventListener('click', () => applyRegionPreset('MENOG'));
+
+    // Quick selection buttons
+    document.getElementById('btn-select-all-cc').addEventListener('click', () => {
+      document.querySelectorAll('.cc-checkbox').forEach(cb => cb.checked = true);
+      updateSection2();
+    });
+
+    document.getElementById('btn-deselect-all-cc').addEventListener('click', () => {
+      document.querySelectorAll('.cc-checkbox').forEach(cb => cb.checked = false);
+      updateSection2();
+    });
+
+    document.getElementById('btn-top-5-cc').addEventListener('click', () => {
+      const top5 = availableCountries.slice(0, 5);
+      document.querySelectorAll('.cc-checkbox').forEach(cb => {
+        cb.checked = top5.includes(cb.value);
+      });
+      updateSection2();
+    });
+
+    document.getElementById('table-search').addEventListener('input', updateSection2);
+
+    // Start App
+    initDuckDB();
+  </script>
+</body>
+</html>

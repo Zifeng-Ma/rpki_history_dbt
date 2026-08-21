@@ -190,7 +190,7 @@
       <div class="glass-panel p-5 rounded-2xl relative">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-            <i class="fa-solid fa-chart-area text-indigo-400"></i> RPKI Coverage Growth Over Time
+            <i class="fa-solid fa-chart-area text-indigo-400"></i> RPKI Coverage Change Over Time
           </h3>
           <span class="text-xs text-slate-400">Timeline slider defaulted to 5 years (drag to zoom/pan)</span>
         </div>
@@ -346,7 +346,7 @@
           SELECT 
             cc,
             ip_version,
-            CAST(month AS STRING) as month_str,
+            CAST(month AS DATE)::STRING as month_str,
             start_of_month_coverage,
             avg_daily_coverage,
             latest_rpki_covered_space,
@@ -468,7 +468,7 @@
                       <div class="text-xs text-slate-300">Month: <span class="font-mono text-indigo-300 font-medium">${params.data.month}</span></div>
                       <div class="text-xs text-slate-300">RPKI Coverage: <span class="font-bold text-emerald-400 font-mono text-sm">${params.data.value}%</span></div>`;
             }
-            return params.name ? `<div class="font-bold text-slate-200">${params.name}</div><div class="text-xs text-slate-400">No data available</div>` : '';
+            return '<div class="text-xs text-slate-400">No data available</div>';
           }
         },
         visualMap: {
@@ -492,6 +492,11 @@
           emphasis: {
             label: { show: false },
             itemStyle: { areaColor: '#6366f1' }
+          },
+          select: {
+            label: {
+              show: false // 阻止点击后弹出国家名称
+            },
           },
           itemStyle: {
             borderColor: '#334155',
@@ -684,7 +689,7 @@
           type: 'value',
           min: 0,
           name: 'Address space (sqrt scale)',
-          axisLabel: { color: '#94a3b8', formatter: value => formatSpace(inverseSpace(value)) },
+          axisLabel: { color: '#94a3b8', formatter: value => formatAddressSpaceAxis(inverseSpace(value)) },
           splitLine: { lineStyle: { color: '#1e293b' } }
         },
         series: [
@@ -712,6 +717,16 @@
       if (Math.abs(number) >= 1e6) return `${(number / 1e6).toFixed(2)}M`;
       if (Math.abs(number) >= 1e3) return `${(number / 1e3).toFixed(2)}K`;
       return number.toLocaleString();
+    }
+    function formatAddressSpaceAxis(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number) || number === 0) return '0';
+      if (Math.abs(number) < 1e6) return number.toLocaleString();
+
+      const exponent = Math.floor(Math.log10(Math.abs(number)));
+      const mantissa = number / Math.pow(10, exponent);
+      const roundedMantissa = Number(mantissa.toPrecision(3));
+      return `${roundedMantissa}e${exponent}`;
     }
 
     // IP Version Switcher Listeners
